@@ -1,5 +1,5 @@
 # Define the decimal digits
-digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.']
 
 # Function to convert decimal to integer
 def decimal_to_integer(decimal):
@@ -20,35 +20,52 @@ def integer_to_decimal(integer):
         integer //= 10
     return decimal
 
-# Function to add two decimal numbers
+def float_to_decimal(float_num):
+    integer_part = int(float_num)
+    fractional_part = float_num - integer_part
+    decimal = integer_to_decimal(integer_part)
+    if fractional_part != 0:
+        decimal += '.'
+        while fractional_part != 0:
+            fractional_part *= 10
+            decimal += digits[int(fractional_part)]
+            fractional_part -= int(fractional_part)
+    return decimal
+
 def decimal_add(decimal1, decimal2):
-    int1 = decimal_to_integer(decimal1)
-    int2 = decimal_to_integer(decimal2)
-    result = int1 + int2
-    return integer_to_decimal(result)
+    float1 = decimal_to_float(decimal1)
+    float2 = decimal_to_float(decimal2)
+    result = float1 + float2
+    return float_to_decimal(result)
 
-# Function to subtract two decimal numbers
 def decimal_subtract(decimal1, decimal2):
-    int1 = decimal_to_integer(decimal1)
-    int2 = decimal_to_integer(decimal2)
-    result = int1 - int2
-    return integer_to_decimal(result)
+    float1 = decimal_to_float(decimal1)
+    float2 = decimal_to_float(decimal2)
+    result = float1 - float2
+    return float_to_decimal(result)
 
-# Function to multiply two decimal numbers
 def decimal_multiply(decimal1, decimal2):
-    int1 = decimal_to_integer(decimal1)
-    int2 = decimal_to_integer(decimal2)
-    result = int1 * int2
-    return integer_to_decimal(result)
+    float1 = decimal_to_float(decimal1)
+    float2 = decimal_to_float(decimal2)
+    result = float1 * float2
+    return float_to_decimal(result)
 
-# Function to divide two decimal numbers
 def decimal_divide(decimal1, decimal2):
-    int1 = decimal_to_integer(decimal1)
-    int2 = decimal_to_integer(decimal2)
-    if int2 == 0:
+    float1 = decimal_to_float(decimal1)
+    float2 = decimal_to_float(decimal2)
+    if float2 == 0:
         raise ZeroDivisionError("Cannot divide by zero")
-    result = int1 // int2
-    return integer_to_decimal(result)
+    result = float1 / float2
+    return float_to_decimal(result)
+
+def decimal_to_float(decimal):
+    if '.' in decimal:
+        integer_part, fractional_part = decimal.split('.')
+        integer = decimal_to_integer(integer_part)
+        fraction = decimal_to_integer(fractional_part) / (10 ** len(fractional_part))
+        return integer + fraction
+    else:
+        return decimal_to_integer(decimal)
 
 # Function to perform logical AND on two decimal numbers
 def decimal_and(decimal1, decimal2):
@@ -265,7 +282,7 @@ class Kernel:
 memory_size = 100
 
 program = [
-    "load result_register 5",
+    "load result_register 5.5",
     "load temporary__register 10",
     "add result_register temporary__register",
     "store result_register 50",
