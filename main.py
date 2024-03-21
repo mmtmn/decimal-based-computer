@@ -202,9 +202,85 @@ class ControlUnit:
 
     def decode_instruction(self, instruction):
         parts = instruction.split()
-        operation = parts[0]
+        opcode = parts[0]
         operands = parts[1:]
-        return operation, operands
+        
+        if opcode == "00":  # LOAD
+            register = operands[0]
+            value = operands[1]
+            return ("load", [register, value])
+        elif opcode == "01":  # STORE
+            register = operands[0]
+            address = operands[1]
+            return ("store", [register, address])
+        elif opcode == "02":  # ADD
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("add", [register1, register2])
+        elif opcode == "03":  # SUBTRACT
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("subtract", [register1, register2])
+        elif opcode == "04":  # MULTIPLY
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("multiply", [register1, register2])
+        elif opcode == "05":  # DIVIDE
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("divide", [register1, register2])
+        elif opcode == "06":  # AND
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("and", [register1, register2])
+        elif opcode == "07":  # OR
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("or", [register1, register2])
+        elif opcode == "08":  # XOR
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("xor", [register1, register2])
+        elif opcode == "09":  # NOT
+            register = operands[0]
+            return ("not", [register])
+        elif opcode == "10":  # LEFT_SHIFT
+            register = operands[0]
+            shift = operands[1]
+            return ("left_shift", [register, shift])
+        elif opcode == "11":  # RIGHT_SHIFT
+            register = operands[0]
+            shift = operands[1]
+            return ("right_shift", [register, shift])
+        elif opcode == "12":  # JUMP
+            address = operands[0]
+            return ("jump", [address])
+        elif opcode == "13":  # JUMP_IF_ZERO
+            address = operands[0]
+            register = operands[1]
+            return ("jump_if_zero", [address, register])
+        elif opcode == "14":  # JUMP_IF_NOT_ZERO
+            address = operands[0]
+            register = operands[1]
+            return ("jump_if_not_zero", [address, register])
+        elif opcode == "15":  # INPUT
+            address = operands[0]
+            return ("input", [address])
+        elif opcode == "16":  # OUTPUT
+            address = operands[0]
+            return ("output", [address])
+        elif opcode == "17":  # LOAD_FROM_SECONDARY
+            address_secondary = operands[0]
+            address_main = operands[1]
+            return ("load_from_secondary", [address_secondary, address_main])
+        elif opcode == "18":  # STORE_TO_SECONDARY
+            address_main = operands[0]
+            address_secondary = operands[1]
+            return ("store_to_secondary", [address_main, address_secondary])
+        elif opcode == "19":  # HALT
+            return ("halt", [])
+        else:
+            raise ValueError(f"Invalid opcode: {opcode}")
 
     def execute_instruction(self, operation, operands):
         if operation == "load":
@@ -216,21 +292,84 @@ class ControlUnit:
             address = decimal_to_integer(operands[1])
             value = self.registers.store(register)
             self.memory.load(address, value)
-        elif operation in ["add", "subtract", "multiply", "divide", "and", "or", "xor", "not", "left_shift", "right_shift"]:
-            operand1 = self.registers.store(operands[0])
-            operand2 = self.registers.store(operands[1]) if len(operands) > 1 else None
+        elif operation == "add":
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
             result = self.alu.execute(operation, operand1, operand2)
-            self.registers.load(operands[0], result)
+            self.registers.load(register1, result)
+        elif operation == "subtract":
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
+            result = self.alu.execute(operation, operand1, operand2)
+            self.registers.load(register1, result)
+        elif operation == "multiply":
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
+            result = self.alu.execute(operation, operand1, operand2)
+            self.registers.load(register1, result)
+        elif operation == "divide":
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
+            result = self.alu.execute(operation, operand1, operand2)
+            self.registers.load(register1, result)
+        elif operation == "and":
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
+            result = self.alu.execute(operation, operand1, operand2)
+            self.registers.load(register1, result)
+        elif operation == "or":
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
+            result = self.alu.execute(operation, operand1, operand2)
+            self.registers.load(register1, result)
+        elif operation == "xor":
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
+            result = self.alu.execute(operation, operand1, operand2)
+            self.registers.load(register1, result)
+        elif operation == "not":
+            register = operands[0]
+            operand = self.registers.store(register)
+            result = self.alu.execute(operation, operand, None)
+            self.registers.load(register, result)
+        elif operation == "left_shift":
+            register = operands[0]
+            shift = operands[1]
+            operand1 = self.registers.store(register)
+            result = self.alu.execute(operation, operand1, shift)
+            self.registers.load(register, result)
+        elif operation == "right_shift":
+            register = operands[0]
+            shift = operands[1]
+            operand1 = self.registers.store(register)
+            result = self.alu.execute(operation, operand1, shift)
+            self.registers.load(register, result)
         elif operation == "jump":
             address = decimal_to_integer(operands[0])
             self.program_counter = address
         elif operation == "jump_if_zero":
             address = decimal_to_integer(operands[0])
-            if self.registers.store(operands[1]) == '0':
+            register = operands[1]
+            if self.registers.store(register) == '0':
                 self.program_counter = address
         elif operation == "jump_if_not_zero":
             address = decimal_to_integer(operands[0])
-            if self.registers.store(operands[1]) != '0':
+            register = operands[1]
+            if self.registers.store(register) != '0':
                 self.program_counter = address
         elif operation == "input":
             address = decimal_to_integer(operands[0])
@@ -250,13 +389,15 @@ class ControlUnit:
             address_secondary = decimal_to_integer(operands[1])
             value = self.memory.store(address_main)
             self.secondary_memory.load(address_secondary, value)
+        elif operation == "halt":
+            pass  # Do nothing, the program will halt
         else:
             raise ValueError(f"Invalid instruction: {operation}")
-
+        
     def run_program(self):
         while True:
             instruction = self.fetch_instruction()
-            if instruction == "halt":
+            if instruction == "19":
                 break
             operation, operands = self.decode_instruction(instruction)
             self.execute_instruction(operation, operands)
@@ -282,12 +423,12 @@ class Kernel:
 memory_size = 100
 
 program = [
-    "load result_register 5.5",
-    "load temporary__register 10",
-    "add result_register temporary__register",
-    "store result_register 50",
-    "output 50",
-    "halt"
+    "00 result_register 5.5",
+    "00 temporary__register 10",
+    "02 result_register temporary__register",
+    "01 result_register 50",
+    "16 50",
+    "19"
 ]
 
 kernel = Kernel(memory_size)
