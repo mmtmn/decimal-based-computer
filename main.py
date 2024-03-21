@@ -1,4 +1,5 @@
 import random
+import struct
 
 # Define the decimal digits
 digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.']
@@ -701,6 +702,228 @@ class MemoryManagementUnit:
         segment_selector = virtual_address[:2]  # Assuming segment selector is the first two digits
         offset = decimal_to_integer(virtual_address[2:])
         return segment_selector, offset
+
+# Parallel Port Protocol
+class ParallelPortProtocol:
+    def __init__(self, port_address):
+        self.port_address = port_address
+        self.data_register = 0
+        self.status_register = 0
+        self.control_register = 0
+
+    def send_data(self, data):
+        # Convert decimal data to integer
+        data_integer = decimal_to_integer(data)
+
+        # Set the data register with the data to be sent
+        self.data_register = data_integer
+
+        # Perform any necessary control register operations
+        # ...
+
+        # Wait for the device to be ready
+        while not self.status_register & 0x01:
+            pass
+
+        # Trigger the data transmission
+        # ...
+
+    def receive_data(self):
+        # Wait for data to be available
+        while not self.status_register & 0x02:
+            pass
+
+        # Read the data from the data register
+        data_integer = self.data_register
+
+        # Convert the integer data to decimal
+        data_decimal = integer_to_decimal(data_integer)
+
+        return data_decimal
+
+# Serial Port Protocol
+class SerialPortProtocol:
+    def __init__(self, port, baud_rate):
+        self.port = port
+        self.baud_rate = baud_rate
+        self.data_buffer = []
+        self.receive_buffer = []
+
+    def send_data(self, data):
+        # Convert decimal data to integer
+        data_integer = decimal_to_integer(data)
+
+        # Convert the integer data to a sequence of bits
+        bit_sequence = []
+        for _ in range(8):
+            bit_sequence.append(data_integer & 0x01)
+            data_integer >>= 1
+
+        # Add start and stop bits
+        bit_sequence = [0] + bit_sequence + [1]
+
+        # Transmit the bit sequence over the serial port
+        for bit in bit_sequence:
+            # Send the bit at the specified baud rate
+            # ...
+            pass
+
+    def receive_data(self):
+        # Check if there is data in the receive buffer
+        if self.receive_buffer:
+            data_bits = self.receive_buffer.pop(0)
+
+            # Remove start and stop bits
+            data_bits = data_bits[1:-1]
+
+            # Convert the bit sequence to an integer
+            data_integer = 0
+            for bit in data_bits:
+                data_integer = (data_integer << 1) | bit
+
+            # Convert the integer data to decimal
+            data_decimal = integer_to_decimal(data_integer)
+
+            return data_decimal
+
+        return '0'
+
+# Printer Driver
+class PrinterDriver:
+    def __init__(self, port, protocol):
+        self.port = port
+        self.protocol = protocol
+
+    def print_data(self, data):
+        # Convert decimal data to integer
+        data_integer = decimal_to_integer(data)
+
+        # Convert the integer data to a sequence of bits
+        bit_sequence = []
+        for _ in range(8):
+            bit_sequence.append(data_integer & 0x01)
+            data_integer >>= 1
+
+        # Send the bit sequence to the printer using the specified protocol
+        self.protocol.send_data(bit_sequence)
+
+# Network Driver
+class NetworkDriver:
+    def __init__(self, interface, protocol):
+        self.interface = interface
+        self.protocol = protocol
+
+    def send_data(self, data, destination):
+        # Convert decimal data to integer
+        data_integer = decimal_to_integer(data)
+
+        # Convert the integer data to a sequence of bits
+        bit_sequence = []
+        for _ in range(8):
+            bit_sequence.append(data_integer & 0x01)
+            data_integer >>= 1
+
+        # Encapsulate the bit sequence with the destination address and any necessary headers
+        packet = self.protocol.encapsulate(bit_sequence, destination)
+
+        # Transmit the packet over the network interface
+        self.interface.send(packet)
+
+    def receive_data(self):
+        # Receive a packet from the network interface
+        packet = self.interface.receive()
+
+        # Extract the bit sequence from the packet
+        bit_sequence = self.protocol.extract(packet)
+
+        # Convert the bit sequence to an integer
+        data_integer = 0
+        for bit in bit_sequence:
+            data_integer = (data_integer << 1) | bit
+
+        # Convert the integer data to decimal
+        data_decimal = integer_to_decimal(data_integer)
+
+        return data_decimal
+
+# Network Protocol (e.g., Ethernet)
+class EthernetProtocol:
+    def __init__(self, src_mac, dst_mac):
+        self.src_mac = src_mac  # Source MAC address
+        self.dst_mac = dst_mac  # Destination MAC address
+        self.ethernet_header_format = "!6s6s2s"  # Ethernet header format
+
+    def encapsulate(self, data, destination):
+        # Convert the destination address to bytes
+        dst_mac_bytes = self.convert_decimal_to_bytes(destination, 6)
+
+        # Create the Ethernet header
+        ethernet_header = struct.pack(
+            self.ethernet_header_format,
+            self.convert_decimal_to_bytes(self.src_mac, 6),
+            dst_mac_bytes,
+            b"\x08\x00"  # Ethernet type (IP)
+        )
+
+        # Combine the Ethernet header and data
+        packet = ethernet_header + self.convert_decimal_to_bytes(data, len(data))
+
+        return packet
+
+    def extract(self, packet):
+        # Extract the Ethernet header
+        ethernet_header_length = struct.calcsize(self.ethernet_header_format)
+        header = packet[:ethernet_header_length]
+        src_mac, dst_mac, ethernet_type = struct.unpack(self.ethernet_header_format, header)
+
+        # Extract the data from the packet
+        data_bytes = packet[ethernet_header_length:]
+
+        # Convert the data bytes to decimal
+        data_decimal = self.convert_bytes_to_decimal(data_bytes)
+
+        return data_decimal
+
+    def convert_decimal_to_bytes(self, decimal_string, num_bytes):
+        decimal_value = decimal_to_integer(decimal_string)
+        byte_list = decimal_value.to_bytes(num_bytes, byteorder='big')
+        return byte_list
+
+    def convert_bytes_to_decimal(self, byte_list):
+        decimal_value = int.from_bytes(byte_list, byteorder='big')
+        decimal_string = integer_to_decimal(decimal_value)
+        return decimal_string
+
+# Device Manager
+class DeviceManager:
+    def __init__(self):
+        self.devices = {}
+
+    def register_device(self, device_type, device_driver):
+        self.devices[device_type] = device_driver
+
+    def get_device_driver(self, device_type):
+        return self.devices.get(device_type, None)
+
+# Input/Output Devices
+class InputOutputDevices:
+    def __init__(self, device_manager):
+        self.device_manager = device_manager
+
+    def read_input(self, device_type, protocol):
+        device_driver = self.device_manager.get_device_driver(device_type)
+        if device_driver:
+            return device_driver.receive_data(protocol)
+        else:
+            raise ValueError(f"Invalid device type: {device_type}")
+
+    def write_output(self, data, device_type, protocol):
+        device_driver = self.device_manager.get_device_driver(device_type)
+        if device_driver:
+            device_driver.send_data(data, protocol)
+        else:
+            raise ValueError(f"Invalid device type: {device_type}")
+
 
 # Example usage
 memory_size = 100
