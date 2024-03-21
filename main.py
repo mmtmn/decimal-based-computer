@@ -194,6 +194,53 @@ class ControlUnit:
         self.io_devices = io_devices
         self.secondary_memory = secondary_memory
         self.program_counter = 0
+        self.interrupts = []
+        self.interrupt_enabled = True
+
+    def register_interrupt(self, interrupt):
+        self.interrupts.append(interrupt)
+
+    def check_interrupts(self):
+        for interrupt in self.interrupts:
+            if interrupt.handler():
+                self.handle_interrupt(interrupt)
+                break
+
+    def handle_interrupt(self, interrupt):
+        if self.interrupt_enabled:
+            # Save the current state
+            self.registers.load("saved_pc", self.program_counter)
+            
+            # Set the program counter to the interrupt handler address
+            self.program_counter = 6  # Assuming the interrupt handler code starts at memory address 6
+            
+            # Disable further interrupts
+            self.interrupt_enabled = False
+
+    def return_from_interrupt(self):
+        # Restore the saved state
+        self.program_counter = self.registers.store("saved_pc")
+        
+        # Enable interrupts
+        self.interrupt_enabled = True
+
+    def run_program(self):
+        while True:
+            # Check for interrupts
+            self.check_interrupts()
+
+            instruction = self.fetch_instruction()
+            if instruction == "19":
+                break
+            operation, operands = self.decode_instruction(instruction)
+            self.execute_instruction(operation, operands)
+    def __init__(self, alu, registers, memory, io_devices, secondary_memory):
+        self.alu = alu
+        self.registers = registers
+        self.memory = memory
+        self.io_devices = io_devices
+        self.secondary_memory = secondary_memory
+        self.program_counter = 0
 
     def fetch_instruction(self):
         instruction = self.memory.store(self.program_counter)
@@ -279,6 +326,135 @@ class ControlUnit:
             return ("store_to_secondary", [address_main, address_secondary])
         elif opcode == "19":  # HALT
             return ("halt", [])
+        elif opcode == "rti":
+            self.return_from_interrupt()
+        else:
+            raise ValueError(f"Invalid opcode: {opcode}")
+
+class ControlUnit:
+    def __init__(self, alu, registers, memory, io_devices, secondary_memory):
+        self.alu = alu
+        self.registers = registers
+        self.memory = memory
+        self.io_devices = io_devices
+        self.secondary_memory = secondary_memory
+        self.program_counter = 0
+        self.interrupts = []
+        self.interrupt_enabled = True
+
+    def register_interrupt(self, interrupt):
+        self.interrupts.append(interrupt)
+
+    def check_interrupts(self):
+        for interrupt in self.interrupts:
+            if interrupt.handler():
+                self.handle_interrupt(interrupt)
+                break
+
+    def handle_interrupt(self, interrupt):
+        if self.interrupt_enabled:
+            # Save the current state
+            self.registers.load("saved_pc", self.program_counter)
+            
+            # Set the program counter to the interrupt handler address
+            self.program_counter = self.memory.store(interrupt.name)
+            
+            # Disable further interrupts
+            self.interrupt_enabled = False
+
+    def return_from_interrupt(self):
+        # Restore the saved state
+        self.program_counter = self.registers.store("saved_pc")
+        
+        # Enable interrupts
+        self.interrupt_enabled = True
+
+    def fetch_instruction(self):
+        instruction = self.memory.store(self.program_counter)
+        self.program_counter += 1
+        return instruction
+
+    def decode_instruction(self, instruction):
+        parts = instruction.split()
+        opcode = parts[0]
+        operands = parts[1:]
+        
+        if opcode == "00":  # LOAD
+            register = operands[0]
+            value = operands[1]
+            return ("load", [register, value])
+        elif opcode == "01":  # STORE
+            register = operands[0]
+            address = operands[1]
+            return ("store", [register, address])
+        elif opcode == "02":  # ADD
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("add", [register1, register2])
+        elif opcode == "03":  # SUBTRACT
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("subtract", [register1, register2])
+        elif opcode == "04":  # MULTIPLY
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("multiply", [register1, register2])
+        elif opcode == "05":  # DIVIDE
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("divide", [register1, register2])
+        elif opcode == "06":  # AND
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("and", [register1, register2])
+        elif opcode == "07":  # OR
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("or", [register1, register2])
+        elif opcode == "08":  # XOR
+            register1 = operands[0]
+            register2 = operands[1]
+            return ("xor", [register1, register2])
+        elif opcode == "09":  # NOT
+            register = operands[0]
+            return ("not", [register])
+        elif opcode == "10":  # LEFT_SHIFT
+            register = operands[0]
+            shift = operands[1]
+            return ("left_shift", [register, shift])
+        elif opcode == "11":  # RIGHT_SHIFT
+            register = operands[0]
+            shift = operands[1]
+            return ("right_shift", [register, shift])
+        elif opcode == "12":  # JUMP
+            address = operands[0]
+            return ("jump", [address])
+        elif opcode == "13":  # JUMP_IF_ZERO
+            address = operands[0]
+            register = operands[1]
+            return ("jump_if_zero", [address, register])
+        elif opcode == "14":  # JUMP_IF_NOT_ZERO
+            address = operands[0]
+            register = operands[1]
+            return ("jump_if_not_zero", [address, register])
+        elif opcode == "15":  # INPUT
+            address = operands[0]
+            return ("input", [address])
+        elif opcode == "16":  # OUTPUT
+            address = operands[0]
+            return ("output", [address])
+        elif opcode == "17":  # LOAD_FROM_SECONDARY
+            address_secondary = operands[0]
+            address_main = operands[1]
+            return ("load_from_secondary", [address_secondary, address_main])
+        elif opcode == "18":  # STORE_TO_SECONDARY
+            address_main = operands[0]
+            address_secondary = operands[1]
+            return ("store_to_secondary", [address_main, address_secondary])
+        elif opcode == "19":  # HALT
+            return ("halt", [])
+        elif opcode == "20":  # RTI
+            return ("rti", [])
         else:
             raise ValueError(f"Invalid opcode: {opcode}")
 
@@ -393,15 +569,17 @@ class ControlUnit:
             pass  # Do nothing, the program will halt
         else:
             raise ValueError(f"Invalid instruction: {operation}")
-        
+
     def run_program(self):
         while True:
+            # Check for interrupts
+            self.check_interrupts()
+
             instruction = self.fetch_instruction()
             if instruction == "19":
                 break
             operation, operands = self.decode_instruction(instruction)
             self.execute_instruction(operation, operands)
-
 # Kernel
 class Kernel:
     def __init__(self, memory_size):
@@ -419,6 +597,22 @@ class Kernel:
     def run(self):
         self.control_unit.run_program()
 
+class Interrupt:
+    def __init__(self, name, handler):
+        self.name = name
+        self.handler = handler
+
+# Define an interrupt handler
+def timer_interrupt_handler():
+    # Check if the timer interrupt condition is met
+    # For example, let's assume the interrupt is triggered every 5 instructions
+    if kernel.control_unit.program_counter % 5 == 0:
+        print("Timer interrupt triggered!")
+        # Jump to the interrupt handler address
+        kernel.control_unit.program_counter = 6  # Assuming the interrupt handler code starts at memory address 6
+        return True  # Return True if the interrupt should be handled
+    return False  # Return False if the interrupt should not be handled
+
 # Example usage
 memory_size = 100
 
@@ -433,4 +627,15 @@ program = [
 
 kernel = Kernel(memory_size)
 kernel.load_program(program)
+
+# Register the interrupt handler
+timer_interrupt = Interrupt("timer_interrupt", timer_interrupt_handler)
+kernel.control_unit.register_interrupt(timer_interrupt)
+
+# Store the interrupt handler address in memory
+kernel.main_memory.load(6, "00 interrupt_register 1")  # Load the value 1 into the interrupt_register
+kernel.main_memory.load(7, "16 51")  # Output the value stored at memory address 51
+kernel.main_memory.load(8, "20")  # Return from the interrupt using the "RTI" instruction (opcode 20)
+
+# Run the program
 kernel.run()
