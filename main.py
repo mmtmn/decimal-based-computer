@@ -1,3 +1,5 @@
+import random
+
 # Define the decimal digits
 digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.']
 
@@ -638,6 +640,67 @@ class TimerInterrupt:
             self.is_handling_interrupt = True
             return True  # Return True if the interrupt should be handled
         return False  # Return False if the interrupt should not be handled
+    
+class MemoryAccessViolation(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+class PageFaultException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+class MemoryManagementUnit:
+    def __init__(self, page_table, segment_table, physical_memory_size):
+        self.page_table = page_table
+        self.segment_table = segment_table
+        self.page_size = 4096  # Assuming a page size of 4 KB
+        self.physical_memory = ['0'] * physical_memory_size
+        self.free_frames = list(range(physical_memory_size // self.page_size))
+
+    def translate_address(self, virtual_address):
+        segment_selector, offset = self.split_address(virtual_address)
+        segment_base, segment_limit = self.segment_table[segment_selector]
+
+        if offset < segment_limit:
+            physical_address = self.translate_virtual_to_physical(segment_base, offset)
+            return physical_address
+        else:
+            raise MemoryAccessViolation("Offset exceeded segment limit")
+
+    def translate_virtual_to_physical(self, segment_base, offset):
+        virtual_page_number = offset // self.page_size
+        page_table_entry = self.page_table[segment_base + virtual_page_number]
+
+        if page_table_entry is None:
+            # Page fault handling
+            self.handle_page_fault(segment_base, virtual_page_number)
+            page_table_entry = self.page_table[segment_base + virtual_page_number]
+
+        physical_page_frame = page_table_entry
+        page_offset = offset % self.page_size
+        physical_address = (physical_page_frame * self.page_size) + page_offset
+        return physical_address
+
+    def handle_page_fault(self, segment_base, virtual_page_number):
+        if not self.free_frames:
+            raise PageFaultException("No free physical frames available")
+
+        # Allocate a new physical page frame
+        physical_page_frame = self.free_frames.pop()
+
+        # Update the page table entry
+        self.page_table[segment_base + virtual_page_number] = physical_page_frame
+
+    def split_address(self, virtual_address):
+        segment_selector = virtual_address[:2]  # Assuming segment selector is the first two digits
+        offset = decimal_to_integer(virtual_address[2:])
+        return segment_selector, offset
 
 # Example usage
 memory_size = 100
