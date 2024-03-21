@@ -203,7 +203,7 @@ class ControlUnit:
             operand1 = self.registers.store(operands[0])
             operand2 = self.registers.store(operands[1]) if len(operands) > 1 else None
             result = self.alu.execute(operation, operand1, operand2)
-            self.registers.load(operands[-1], result)
+            self.registers.load(operands[0], result)
         elif operation == "jump":
             address = decimal_to_integer(operands[0])
             self.program_counter = address
@@ -263,11 +263,12 @@ class Kernel:
 
 # Example usage
 memory_size = 100
+
 program = [
-    "load acc 5",
-    "load r1 10",
-    "add acc r1",
-    "store acc 50",
+    "load result_register 5",
+    "load temporary__register 10",
+    "add result_register temporary__register",
+    "store result_register 50",
     "output 50",
     "halt"
 ]
