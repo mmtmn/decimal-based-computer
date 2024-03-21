@@ -390,85 +390,90 @@ class ControlUnit:
         parts = instruction.split()
         opcode = parts[0]
         operands = parts[1:]
-        
-        if opcode == "00":  # LOAD
-            register = operands[0]
-            value = operands[1]
-            return ("load", [register, value])
-        elif opcode == "01":  # STORE
-            register = operands[0]
-            address = operands[1]
-            return ("store", [register, address])
-        elif opcode == "02":  # ADD
-            register1 = operands[0]
-            register2 = operands[1]
-            return ("add", [register1, register2])
-        elif opcode == "03":  # SUBTRACT
-            register1 = operands[0]
-            register2 = operands[1]
-            return ("subtract", [register1, register2])
-        elif opcode == "04":  # MULTIPLY
-            register1 = operands[0]
-            register2 = operands[1]
-            return ("multiply", [register1, register2])
-        elif opcode == "05":  # DIVIDE
-            register1 = operands[0]
-            register2 = operands[1]
-            return ("divide", [register1, register2])
-        elif opcode == "06":  # AND
-            register1 = operands[0]
-            register2 = operands[1]
-            return ("and", [register1, register2])
-        elif opcode == "07":  # OR
-            register1 = operands[0]
-            register2 = operands[1]
-            return ("or", [register1, register2])
-        elif opcode == "08":  # XOR
-            register1 = operands[0]
-            register2 = operands[1]
-            return ("xor", [register1, register2])
-        elif opcode == "09":  # NOT
-            register = operands[0]
-            return ("not", [register])
-        elif opcode == "10":  # LEFT_SHIFT
-            register = operands[0]
-            shift = operands[1]
-            return ("left_shift", [register, shift])
-        elif opcode == "11":  # RIGHT_SHIFT
-            register = operands[0]
-            shift = operands[1]
-            return ("right_shift", [register, shift])
-        elif opcode == "12":  # JUMP
-            address = operands[0]
-            return ("jump", [address])
-        elif opcode == "13":  # JUMP_IF_ZERO
-            address = operands[0]
-            register = operands[1]
-            return ("jump_if_zero", [address, register])
-        elif opcode == "14":  # JUMP_IF_NOT_ZERO
-            address = operands[0]
-            register = operands[1]
-            return ("jump_if_not_zero", [address, register])
-        elif opcode == "15":  # INPUT
-            address = operands[0]
-            return ("input", [address])
-        elif opcode == "16":  # OUTPUT
-            address = operands[0]
-            return ("output", [address])
-        elif opcode == "17":  # LOAD_FROM_SECONDARY
-            address_secondary = operands[0]
-            address_main = operands[1]
-            return ("load_from_secondary", [address_secondary, address_main])
-        elif opcode == "18":  # STORE_TO_SECONDARY
-            address_main = operands[0]
-            address_secondary = operands[1]
-            return ("store_to_secondary", [address_main, address_secondary])
-        elif opcode == "19":  # HALT
-            return ("halt", [])
-        elif opcode == "rti":
-            self.return_from_interrupt()
+
+        valid_opcodes = ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"]
+
+        if opcode not in valid_opcodes:        
+            if opcode == "00":  # LOAD
+                register = operands[0]
+                value = operands[1]
+                return ("load", [register, value])
+            elif opcode == "01":  # STORE
+                register = operands[0]
+                address = operands[1]
+                return ("store", [register, address])
+            elif opcode == "02":  # ADD
+                register1 = operands[0]
+                register2 = operands[1]
+                return ("add", [register1, register2])
+            elif opcode == "03":  # SUBTRACT
+                register1 = operands[0]
+                register2 = operands[1]
+                return ("subtract", [register1, register2])
+            elif opcode == "04":  # MULTIPLY
+                register1 = operands[0]
+                register2 = operands[1]
+                return ("multiply", [register1, register2])
+            elif opcode == "05":  # DIVIDE
+                register1 = operands[0]
+                register2 = operands[1]
+                return ("divide", [register1, register2])
+            elif opcode == "06":  # AND
+                register1 = operands[0]
+                register2 = operands[1]
+                return ("and", [register1, register2])
+            elif opcode == "07":  # OR
+                register1 = operands[0]
+                register2 = operands[1]
+                return ("or", [register1, register2])
+            elif opcode == "08":  # XOR
+                register1 = operands[0]
+                register2 = operands[1]
+                return ("xor", [register1, register2])
+            elif opcode == "09":  # NOT
+                register = operands[0]
+                return ("not", [register])
+            elif opcode == "10":  # LEFT_SHIFT
+                register = operands[0]
+                shift = operands[1]
+                return ("left_shift", [register, shift])
+            elif opcode == "11":  # RIGHT_SHIFT
+                register = operands[0]
+                shift = operands[1]
+                return ("right_shift", [register, shift])
+            elif opcode == "12":  # JUMP
+                address = operands[0]
+                return ("jump", [address])
+            elif opcode == "13":  # JUMP_IF_ZERO
+                address = operands[0]
+                register = operands[1]
+                return ("jump_if_zero", [address, register])
+            elif opcode == "14":  # JUMP_IF_NOT_ZERO
+                address = operands[0]
+                register = operands[1]
+                return ("jump_if_not_zero", [address, register])
+            elif opcode == "15":  # INPUT
+                address = operands[0]
+                return ("input", [address])
+            elif opcode == "16":  # OUTPUT
+                address = operands[0]
+                return ("output", [address])
+            elif opcode == "17":  # LOAD_FROM_SECONDARY
+                address_secondary = operands[0]
+                address_main = operands[1]
+                return ("load_from_secondary", [address_secondary, address_main])
+            elif opcode == "18":  # STORE_TO_SECONDARY
+                address_main = operands[0]
+                address_secondary = operands[1]
+                return ("store_to_secondary", [address_main, address_secondary])
+            elif opcode == "19":  # HALT
+                return ("halt", [])
+            elif opcode == "rti":
+                self.return_from_interrupt()
+            else:
+                raise ValueError(f"Invalid opcode: {opcode}")
         else:
-            raise ValueError(f"Invalid opcode: {opcode}")
+            raise InvalidInstructionError(f"Invalid opcode: {opcode}")
 
 class ControlUnit:
     def __init__(self, alu, registers, memory, io_devices, secondary_memory):
@@ -1119,6 +1124,13 @@ class TerminalDriver:
     def receive_data(self, protocol=None):
         return input("Enter input: ")
 
+class InvalidInstructionError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
 # Create an instance of the DeviceManager
 device_manager = DeviceManager()
 
@@ -1130,6 +1142,8 @@ terminal_driver = TerminalDriver()
 
 # Register the terminal driver with the DeviceManager
 device_manager.register_device("terminal", terminal_driver)
+
+
 
 # Example usage
 memory_size = 100
