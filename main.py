@@ -216,6 +216,7 @@ class ControlUnit:
             
             # Disable further interrupts
             self.interrupt_enabled = False
+    
 
     def return_from_interrupt(self):
         # Restore the saved state
@@ -234,6 +235,8 @@ class ControlUnit:
                 break
             operation, operands = self.decode_instruction(instruction)
             self.execute_instruction(operation, operands)
+        
+
     def __init__(self, alu, registers, memory, io_devices, secondary_memory):
         self.alu = alu
         self.registers = registers
@@ -357,7 +360,7 @@ class ControlUnit:
             self.registers.load("saved_pc", self.program_counter)
             
             # Set the program counter to the interrupt handler address
-            self.program_counter = self.memory.store(interrupt.name)
+            self.program_counter = 6
             
             # Disable further interrupts
             self.interrupt_enabled = False
@@ -567,6 +570,8 @@ class ControlUnit:
             self.secondary_memory.load(address_secondary, value)
         elif operation == "halt":
             pass  # Do nothing, the program will halt
+        elif operation == "rti":
+            self.return_from_interrupt()
         else:
             raise ValueError(f"Invalid instruction: {operation}")
 
@@ -608,10 +613,31 @@ def timer_interrupt_handler():
     # For example, let's assume the interrupt is triggered every 5 instructions
     if kernel.control_unit.program_counter % 5 == 0:
         print("Timer interrupt triggered!")
+        # Store a different value in memory location 51
+        kernel.main_memory.load(51, '1')
         # Jump to the interrupt handler address
-        kernel.control_unit.program_counter = 6  # Assuming the interrupt handler code starts at memory address 6
+        kernel.control_unit.handle_interrupt(timer_interrupt)
         return True  # Return True if the interrupt should be handled
     return False  # Return False if the interrupt should not be handled
+
+
+# Define an interrupt handler
+class TimerInterrupt:
+    def __init__(self):
+        self.is_handling_interrupt = False
+
+    def handler(self):
+        # Check if the timer interrupt condition is met
+        # For example, let's assume the interrupt is triggered every 5 instructions
+        if kernel.control_unit.program_counter % 5 == 0 and not self.is_handling_interrupt:
+            print("Timer interrupt triggered!")
+            # Store a different value in memory location 51
+            kernel.main_memory.load(51, '1')
+            # Jump to the interrupt handler address
+            kernel.control_unit.handle_interrupt(self)
+            self.is_handling_interrupt = True
+            return True  # Return True if the interrupt should be handled
+        return False  # Return False if the interrupt should not be handled
 
 # Example usage
 memory_size = 100
@@ -629,13 +655,16 @@ kernel = Kernel(memory_size)
 kernel.load_program(program)
 
 # Register the interrupt handler
-timer_interrupt = Interrupt("timer_interrupt", timer_interrupt_handler)
+timer_interrupt = TimerInterrupt()
 kernel.control_unit.register_interrupt(timer_interrupt)
 
-# Store the interrupt handler address in memory
+# Store the interrupt handler code in memory
 kernel.main_memory.load(6, "00 interrupt_register 1")  # Load the value 1 into the interrupt_register
 kernel.main_memory.load(7, "16 51")  # Output the value stored at memory address 51
 kernel.main_memory.load(8, "20")  # Return from the interrupt using the "RTI" instruction (opcode 20)
+
+# Initialize memory location 51 with '0'
+kernel.main_memory.load(51, '0')
 
 # Run the program
 kernel.run()
