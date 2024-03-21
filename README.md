@@ -44,7 +44,7 @@ The control unit is the heart of the computer. It fetches instructions from memo
 
 1. Clone the repository or download the source code files.
 2. Ensure you have Python installed on your system.
-3. Open the pc.py file in a Python environment or editor.
+3. Open the `pc.py file in a Python environment or editor.
 4. Modify the `program` list to define the instructions you want to execute.
 5. Create an instance of the `Kernel` class with the desired memory size.
 6. Load the program into the kernel using the `load_program` method.
@@ -67,7 +67,7 @@ program = [
 kernel = Kernel(memory_size)
 kernel.load_program(program)
 kernel.run()
-
+``
 
 ## Future features:
 
