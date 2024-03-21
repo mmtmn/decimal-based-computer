@@ -1,5 +1,6 @@
 import random
 import struct
+import threading
 
 # Define the decimal digits
 digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.']
@@ -200,6 +201,18 @@ class ControlUnit:
         self.interrupts = []
         self.interrupt_enabled = True
 
+        # Pipeline stages
+        self.fetch_stage = PipelineStage()
+        self.decode_stage = PipelineStage()
+        self.execute_stage = PipelineStage()
+        self.write_back_stage = PipelineStage()
+
+        # Instruction queue for parallel execution
+        self.instruction_queue = []
+        self.lock = threading.Lock()
+        self.threads = []
+
+
     def register_interrupt(self, interrupt):
         self.interrupts.append(interrupt)
 
@@ -219,7 +232,6 @@ class ControlUnit:
             
             # Disable further interrupts
             self.interrupt_enabled = False
-    
 
     def return_from_interrupt(self):
         # Restore the saved state
@@ -228,17 +240,138 @@ class ControlUnit:
         # Enable interrupts
         self.interrupt_enabled = True
 
+    def fetch_stage(self):
+        while True:
+            instruction = self.fetch_instruction()
+            if instruction is None:
+                break
+            self.fetch_stage.add(instruction)
+
+    def decode_stage(self):
+        while True:
+            instruction = self.fetch_stage.get()
+            if instruction is None:
+                break
+            operation, operands = self.decode_instruction(instruction)
+            self.decode_stage.add((operation, operands))
+
+    def execute_stage(self):
+        while True:
+            operation_and_operands = self.decode_stage.get()
+            if operation_and_operands is None:
+                break
+            operation, operands = operation_and_operands
+            result = self.execute_instruction(operation, operands)
+            self.execute_stage.add(result)
+
+    def write_back_stage(self):
+        while True:
+            result = self.execute_stage.get()
+            if result is None:
+                break
+            self.write_back(result)
+
     def run_program(self):
         while True:
             # Check for interrupts
             self.check_interrupts()
 
-            instruction = self.fetch_instruction()
-            if instruction == "19":
+            # Pipeline stages
+            self.fetch_stage()
+            self.decode_stage()
+            self.execute_stage()
+            self.write_back_stage()
+
+            # Parallel execution
+            self.lock.acquire()
+            for instruction in self.instruction_queue:
+                thread = threading.Thread(target=self.execute_instruction, args=(instruction,))
+                self.threads.append(thread)
+                thread.start()
+            self.instruction_queue.clear()
+            self.lock.release()
+
+            # Wait for worker threads to complete
+            for thread in self.threads:
+                thread.join()
+            self.threads.clear()
+
+            # Check for halt instruction
+            if self.write_back_stage.buffer and self.write_back_stage.buffer[0] == "halt":
                 break
-            operation, operands = self.decode_instruction(instruction)
-            self.execute_instruction(operation, operands)
-        
+
+    def execute_instruction(self, instruction):
+        operation, operands = self.decode_instruction(instruction)
+        # Execute the instruction using the existing execute_instruction method
+        result = self.execute_instruction(operation, operands)
+        # Add the result to the write-back stage
+        self.write_back_stage.add(result)
+
+    def write_back(self, result):
+        operation, operands = result
+
+        if operation == "load":
+            register = operands[0]
+            value = operands[1]
+            self.registers.load(register, value)
+        elif operation == "store":
+            register = operands[0]
+            address = decimal_to_integer(operands[1])
+            value = self.registers.store(register)
+            self.memory.load(address, value)
+        elif operation in ["add", "subtract", "multiply", "divide", "and", "or", "xor"]:
+            register1 = operands[0]
+            register2 = operands[1]
+            operand1 = self.registers.store(register1)
+            operand2 = self.registers.store(register2)
+            result = self.alu.execute(operation, operand1, operand2)
+            self.registers.load(register1, result)
+        elif operation == "not":
+            register = operands[0]
+            operand = self.registers.store(register)
+            result = self.alu.execute(operation, operand, None)
+            self.registers.load(register, result)
+        elif operation in ["left_shift", "right_shift"]:
+            register = operands[0]
+            shift = operands[1]
+            operand1 = self.registers.store(register)
+            result = self.alu.execute(operation, operand1, shift)
+            self.registers.load(register, result)
+        elif operation == "jump":
+            address = decimal_to_integer(operands[0])
+            self.program_counter = address
+        elif operation == "jump_if_zero":
+            address = decimal_to_integer(operands[0])
+            register = operands[1]
+            if self.registers.store(register) == '0':
+                self.program_counter = address
+        elif operation == "jump_if_not_zero":
+            address = decimal_to_integer(operands[0])
+            register = operands[1]
+            if self.registers.store(register) != '0':
+                self.program_counter = address
+        elif operation == "input":
+            address = decimal_to_integer(operands[0])
+            data = self.io_devices.read_input()
+            self.memory.load(address, data)
+        elif operation == "output":
+            address = decimal_to_integer(operands[0])
+            data = self.memory.store(address)
+            self.io_devices.write_output(data)
+        elif operation == "load_from_secondary":
+            address_secondary = decimal_to_integer(operands[0])
+            address_main = decimal_to_integer(operands[1])
+            value = self.secondary_memory.store(address_secondary)
+            self.memory.load(address_main, value)
+        elif operation == "store_to_secondary":
+            address_main = decimal_to_integer(operands[0])
+            address_secondary = decimal_to_integer(operands[1])
+            value = self.memory.store(address_main)
+            self.secondary_memory.load(address_secondary, value)
+        elif operation == "halt":
+            pass  # Do nothing, the program will halt
+        elif operation == "rti":
+            self.return_from_interrupt()
 
     def __init__(self, alu, registers, memory, io_devices, secondary_memory):
         self.alu = alu
@@ -555,12 +688,17 @@ class ControlUnit:
                 self.program_counter = address
         elif operation == "input":
             address = decimal_to_integer(operands[0])
-            data = self.io_devices.read_input()
+            device_type = "terminal"  # Assuming you want to input from the terminal
+            protocol = None  # No protocol needed for terminal input
+            data = self.io_devices.read_input(device_type, protocol)
             self.memory.load(address, data)
         elif operation == "output":
             address = decimal_to_integer(operands[0])
             data = self.memory.store(address)
-            self.io_devices.write_output(data)
+            # Provide the device_type and protocol as additional arguments
+            device_type = "terminal"  # Assuming you want to output to the terminal
+            protocol = None  # No protocol needed for terminal output
+            self.io_devices.write_output(data, device_type, protocol)
         elif operation == "load_from_secondary":
             address_secondary = decimal_to_integer(operands[0])
             address_main = decimal_to_integer(operands[1])
@@ -594,10 +732,10 @@ class Kernel:
         self.registers = Registers()
         self.alu = ALU()
         self.main_memory = MainMemory(memory_size)
-        self.io_devices = InputOutputDevices()
+        self.io_devices = io_devices  # Use the io_devices instance
         self.secondary_memory = SecondaryMemory()
         self.control_unit = ControlUnit(self.alu, self.registers, self.main_memory, self.io_devices, self.secondary_memory)
-
+        
     def load_program(self, program):
         for address, instruction in enumerate(program):
             self.main_memory.load(address, instruction)
@@ -719,15 +857,43 @@ class ParallelPortProtocol:
         self.data_register = data_integer
 
         # Perform any necessary control register operations
-        # ...
+        self.control_register |= 0x04  # Set the "Data Available" bit
 
         # Wait for the device to be ready
         while not self.status_register & 0x01:
             pass
 
         # Trigger the data transmission
-        # ...
+        self.control_register |= 0x01  # Set the "Transmit" bit
+        self.control_register &= ~0x04  # Clear the "Data Available" bit
 
+    def receive_data(self):
+        # Wait for data to be available
+        while not self.status_register & 0x08:
+            pass
+
+        # Read the data from the data register
+        data_integer = self.data_register
+
+        # Convert the integer data to decimal
+        data_decimal = integer_to_decimal(data_integer)
+
+        # Perform any necessary control register operations
+        self.control_register |= 0x08  # Set the "Data Received" bit
+
+        return data_decimal
+
+    def set_status_register(self, value):
+        self.status_register = value
+
+    def get_status_register(self):
+        return self.status_register
+
+    def set_control_register(self, value):
+        self.control_register = value
+
+    def get_control_register(self):
+        return self.control_register
     def receive_data(self):
         # Wait for data to be available
         while not self.status_register & 0x02:
@@ -924,6 +1090,46 @@ class InputOutputDevices:
         else:
             raise ValueError(f"Invalid device type: {device_type}")
 
+class PipelineStage:
+    def __init__(self):
+        self.buffer = []
+        self.lock = threading.Lock()
+
+    def add(self, item):
+        self.lock.acquire()
+        self.buffer.append(item)
+        self.lock.release()
+
+    def get(self):
+        self.lock.acquire()
+        if self.buffer:
+            item = self.buffer.pop(0)
+            self.lock.release()
+            return item
+        self.lock.release()
+        return None
+
+class TerminalDriver:
+    def __init__(self):
+        pass
+
+    def send_data(self, data, protocol=None):
+        print("Output:", data)
+
+    def receive_data(self, protocol=None):
+        return input("Enter input: ")
+
+# Create an instance of the DeviceManager
+device_manager = DeviceManager()
+
+# Instantiate the InputOutputDevices with the device_manager
+io_devices = InputOutputDevices(device_manager)
+
+# Create an instance of the TerminalDriver
+terminal_driver = TerminalDriver()
+
+# Register the terminal driver with the DeviceManager
+device_manager.register_device("terminal", terminal_driver)
 
 # Example usage
 memory_size = 100
